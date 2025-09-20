@@ -59,6 +59,14 @@ export default function Dashboard() {
     studyTime: completedCount * 6 // Rough estimate of 6 minutes per completed lesson
   };
 
+  const normalizeModuleName = (moduleName: string): string => {
+    const name = moduleName.toLowerCase();
+    if (name.includes('grid')) return 'grid';
+    if (name.includes('position')) return 'position';
+    if (name.includes('flex')) return 'flexbox';
+    return name.replace(/\s+/g, '');
+  };
+
   const getModuleProgress = (moduleName: string) => {
     const moduleLessons = lessons?.filter(l => l.module === moduleName) || [];
     const completedInModule = progress?.filter(p => 
@@ -226,7 +234,8 @@ export default function Dashboard() {
 
                 <div className="grid gap-6">
                   {modules?.map((module) => {
-                    const moduleProgress = getModuleProgress(module.name.toLowerCase().replace(' ', ''));
+                    const normalizedModuleName = normalizeModuleName(module.name);
+                    const moduleProgress = getModuleProgress(normalizedModuleName);
                     const progressPercent = moduleProgress.total > 0 
                       ? Math.round((moduleProgress.completed / moduleProgress.total) * 100) 
                       : 0;
@@ -278,7 +287,7 @@ export default function Dashboard() {
                                 <span className="text-sm text-muted-foreground">
                                   {progressPercent === 100 ? "Completed!" : `${moduleProgress.completed} lessons completed`}
                                 </span>
-                                <Link href={`/lesson/${lessons?.find(l => l.module === module.name.toLowerCase().replace(' ', ''))?.id}`}>
+                                <Link href={`/lesson/${lessons?.find(l => l.module === normalizedModuleName)?.id}`}>
                                   <Button 
                                     variant={progressPercent > 0 ? "default" : "outline"}
                                     size="sm"
