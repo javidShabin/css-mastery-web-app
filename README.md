@@ -12,7 +12,6 @@ A modern web application designed to teach CSS concepts through interactive less
 - ✅ **Code Validation**: Real-time syntax checking and error detection
 
 ## Tech Stack
-
 - **Frontend**: React 18, TypeScript, Tailwind CSS, Vite
 - **Backend**: Node.js, Express (for local development)
 - **Deployment**: Vercel (Serverless Functions)
