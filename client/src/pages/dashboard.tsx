@@ -30,7 +30,7 @@ export default function Dashboard() {
     queryKey: ["/api/progress", "default-user"]
   });
 
-  const { data: user } = useQuery({
+  const { data: user } = useQuery<{ username: string }>({
     queryKey: ["/api/user/default"]
   });
 

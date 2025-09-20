@@ -326,7 +326,9 @@ export class MemStorage implements IStorage {
       const progress: UserProgress = {
         ...insertProgress,
         id,
+        completed: insertProgress.completed ?? false,
         completedAt: insertProgress.completed ? new Date() : null,
+        codeSubmissions: insertProgress.codeSubmissions ?? null,
       };
       this.userProgress.set(id, progress);
       return progress;
