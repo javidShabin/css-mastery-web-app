@@ -102,8 +102,16 @@
 
 .code-editor {
   font-family: var(--font-mono);
+}
+
+.code-editor textarea {
   background: hsl(220, 13%, 18%);
   color: hsl(220, 14%, 96%);
+}
+
+.dark .code-editor textarea {
+  background: hsl(220, 13%, 12%);
+  color: hsl(220, 14%, 98%);
 }
 
 .grid-demo-item {

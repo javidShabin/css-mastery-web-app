@@ -274,7 +274,7 @@ export default function CodeEditor({
                   ? handleHtmlChange(e.target.value)
                   : handleCssChange(e.target.value)
               }
-              className="w-full h-full min-h-[400px] p-4 bg-slate-900 text-slate-100 font-mono text-sm resize-none focus:outline-none border-0"
+              className="w-full h-full min-h-[400px] p-4 font-mono text-sm resize-none focus:outline-none border-0"
               placeholder={
                 activeTab === 'html' 
                   ? "Enter your HTML code here..." 

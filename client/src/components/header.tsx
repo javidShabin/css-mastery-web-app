@@ -3,14 +3,42 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Code, Trophy, Menu } from "lucide-react";
+import { Code, Trophy, Menu, Sun, Moon } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { UserProgress, User } from "@shared/schema";
 
 export default function Header() {
   const isMobile = useIsMobile();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  // Initialize theme from localStorage or system preference
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+      setIsDarkMode(true);
+      document.documentElement.classList.add('dark');
+    } else {
+      setIsDarkMode(false);
+      document.documentElement.classList.remove('dark');
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const newTheme = !isDarkMode;
+    setIsDarkMode(newTheme);
+    
+    if (newTheme) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  };
 
   const { data: user } = useQuery<User>({
     queryKey: ["/api/user/default"]
@@ -67,6 +95,21 @@ export default function Header() {
                 <span>Lessons Complete</span>
               </div>
             )}
+
+            {/* Theme Toggle Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleTheme}
+              className="h-8 w-8 p-0"
+              data-testid="button-theme-toggle"
+            >
+              {isDarkMode ? (
+                <Sun className="h-4 w-4" />
+              ) : (
+                <Moon className="h-4 w-4" />
+              )}
+            </Button>
             
             <Avatar className="h-8 w-8">
               <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
@@ -102,11 +145,26 @@ export default function Header() {
                 </Button>
               </Link>
             </nav>
-            <div className="flex items-center space-x-2 text-sm text-muted-foreground mt-4 pt-4 border-t border-border">
-              <Trophy className="h-4 w-4 text-accent" />
-              <span data-testid="mobile-text-progress">
-                {completedLessons}/{totalLessons} Lessons Complete
-              </span>
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
+              <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                <Trophy className="h-4 w-4 text-accent" />
+                <span data-testid="mobile-text-progress">
+                  {completedLessons}/{totalLessons} Lessons Complete
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={toggleTheme}
+                className="h-8 w-8 p-0"
+                data-testid="mobile-button-theme-toggle"
+              >
+                {isDarkMode ? (
+                  <Sun className="h-4 w-4" />
+                ) : (
+                  <Moon className="h-4 w-4" />
+                )}
+              </Button>
             </div>
           </div>
         )}
