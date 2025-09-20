@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Clock, Signal, Users, Bookmark, ArrowLeft, ArrowRight, Check } from "lucide-react";
+import { Clock, Signal, Users, Bookmark, ArrowLeft, ArrowRight, Check, Lightbulb, Eye, EyeOff } from "lucide-react";
 import type { Lesson, UserProgress } from "@shared/schema";
 
 export default function LessonPage() {
@@ -18,6 +18,8 @@ export default function LessonPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'html' | 'css' | 'result'>('html');
+  const [showHints, setShowHints] = useState(false);
+  const [currentHint, setCurrentHint] = useState(0);
 
   const { data: lesson, isLoading } = useQuery<Lesson>({
     queryKey: ["/api/lessons", id]
@@ -129,7 +131,7 @@ export default function LessonPage() {
       <div className="flex">
         <Sidebar />
         
-        <main className="flex-1 flex flex-col">
+        <main className="flex-1 flex flex-col h-[calc(100vh-80px)]">
           {/* Lesson Header */}
           <div className="bg-card border-b border-border p-6">
             <div className="flex items-center justify-between mb-4">
@@ -195,7 +197,7 @@ export default function LessonPage() {
           </div>
 
           {/* Content Area */}
-          <div className="flex-1 flex">
+          <div className="flex-1 flex flex-col lg:flex-row">
             {/* Theory Section */}
             <div className="flex-1 overflow-y-auto">
               <LessonContent 
@@ -205,12 +207,21 @@ export default function LessonPage() {
             </div>
 
             {/* Interactive Code Editor */}
-            <div className="w-1/2 border-l border-border flex flex-col">
+            <div className="w-full lg:w-1/2 border-t lg:border-t-0 lg:border-l border-border flex flex-col">
               {/* Editor Header */}
               <div className="bg-card border-b border-border p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
                     <h3 className="font-medium">Live Code Editor</h3>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowHints(!showHints)}
+                      className="ml-auto"
+                    >
+                      {showHints ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
+                      {showHints ? 'Hide Hints' : 'Show Hints'}
+                    </Button>
                     <div className="flex space-x-1">
                       <button
                         onClick={() => setActiveTab('html')}
@@ -249,6 +260,29 @@ export default function LessonPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Hints Panel */}
+              {showHints && exercises.length > 0 && (
+                <div className="bg-accent/10 border-b border-border p-4">
+                  <div className="flex items-center space-x-2 mb-3">
+                    <Lightbulb className="h-4 w-4 text-accent" />
+                    <h4 className="font-medium text-accent">Exercise Hints</h4>
+                  </div>
+                  <div className="space-y-2">
+                    {exercises.map((exercise: any, index: number) => (
+                      <div key={index} className="text-sm">
+                        <p className="font-medium mb-1">Hint {index + 1}:</p>
+                        <p className="text-muted-foreground">{exercise.instruction}</p>
+                        {exercise.hint && (
+                          <p className="text-xs text-accent mt-1 italic">
+                            💡 {exercise.hint}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <CodeEditor 
                 lesson={lesson}

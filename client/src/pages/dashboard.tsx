@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import ProgressRing from "@/components/progress-ring";
 import { Link } from "wouter";
-import { Trophy, Clock, Users, BookOpen, Code, Zap } from "lucide-react";
+import { Trophy, Clock, Users, BookOpen, Code, Zap, Check } from "lucide-react";
 import type { Module, Lesson, UserProgress } from "@shared/schema";
 
 interface DashboardStats {
@@ -67,6 +67,15 @@ export default function Dashboard() {
     return name.replace(/\s+/g, '');
   };
 
+  const getModuleDisplayName = (module: string) => {
+    switch (module) {
+      case 'grid': return 'CSS Grid';
+      case 'flexbox': return 'Flexbox';
+      case 'position': return 'CSS Position';
+      default: return module;
+    }
+  };
+
   const getModuleProgress = (moduleName: string) => {
     const moduleLessons = lessons?.filter(l => l.module === moduleName) || [];
     const completedInModule = progress?.filter(p => 
@@ -99,7 +108,7 @@ export default function Dashboard() {
 
             {/* Stats Overview */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              <Card>
+              <Card className="hover:shadow-md transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex items-center space-x-4">
                     <div className="p-2 bg-primary/10 rounded-lg">
@@ -110,12 +119,18 @@ export default function Dashboard() {
                       <p className="text-2xl font-bold" data-testid="text-completed-lessons">
                         {stats.completedLessons}/{stats.totalLessons}
                       </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {completionPercentage}% complete
+                      </p>
                     </div>
+                  </div>
+                  <div className="mt-4">
+                    <Progress value={completionPercentage} className="h-2" />
                   </div>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="hover:shadow-md transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex items-center space-x-4">
                     <div className="p-2 bg-accent/10 rounded-lg">
@@ -126,12 +141,19 @@ export default function Dashboard() {
                       <p className="text-2xl font-bold" data-testid="text-total-modules">
                         {stats.totalModules}
                       </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {modules?.filter(m => {
+                          const normalizedName = normalizeModuleName(m.name);
+                          const moduleProgress = getModuleProgress(normalizedName);
+                          return moduleProgress.completed > 0;
+                        }).length || 0} started
+                      </p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="hover:shadow-md transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex items-center space-x-4">
                     <div className="p-2 bg-secondary/10 rounded-lg">
@@ -142,27 +164,70 @@ export default function Dashboard() {
                       <p className="text-2xl font-bold" data-testid="text-study-time">
                         {stats.studyTime}min
                       </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        ~{Math.round(stats.studyTime / 60)} hours
+                      </p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="hover:shadow-md transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex items-center space-x-4">
                     <div className="p-2 bg-orange-500/10 rounded-lg">
                       <Zap className="h-6 w-6 text-orange-500" />
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Progress</p>
-                      <p className="text-2xl font-bold" data-testid="text-progress-percentage">
-                        {completionPercentage}%
+                      <p className="text-sm text-muted-foreground">Streak</p>
+                      <p className="text-2xl font-bold" data-testid="text-streak">
+                        {Math.min(7, stats.completedLessons)} 🔥
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Keep learning daily!
                       </p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
+
+            {/* Recent Activity Section */}
+            <Card className="mb-8">
+              <CardContent className="p-6">
+                <h2 className="text-xl font-bold mb-4">Recent Activity</h2>
+                <div className="space-y-3">
+                  {progress && progress.length > 0 ? (
+                    progress.slice(-3).reverse().map((p, index) => {
+                      const lesson = lessons?.find(l => l.id === p.lessonId);
+                      if (!lesson) return null;
+                      return (
+                        <div key={p.id} className="flex items-center space-x-3 p-3 bg-muted/50 rounded-lg">
+                          <div className="w-8 h-8 bg-accent/20 rounded-full flex items-center justify-center">
+                            <Check className="h-4 w-4 text-accent" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium">{lesson.title}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {getModuleDisplayName(lesson.module)} • {lesson.duration}min
+                            </p>
+                          </div>
+                          <Badge variant="secondary" className="text-xs">
+                            Completed
+                          </Badge>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-center py-8">
+                      <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                      <p className="text-muted-foreground">No lessons completed yet</p>
+                      <p className="text-sm text-muted-foreground">Start your CSS journey today!</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* Overall Progress */}

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link } from "wouter";
-import { ArrowLeft, Save, Share, Download, RefreshCw } from "lucide-react";
+import { ArrowLeft, Save, Share, Download, RefreshCw, Copy, Check, Code2, Palette, Layout } from "lucide-react";
 
 const codeTemplates = {
   grid: {
@@ -109,6 +109,8 @@ export default function Playground() {
   const [htmlCode, setHtmlCode] = useState(codeTemplates.grid.html);
   const [cssCode, setCssCode] = useState(codeTemplates.grid.css);
   const [activeTab, setActiveTab] = useState<'html' | 'css' | 'result'>('html');
+  const [copied, setCopied] = useState(false);
+  const [previewMode, setPreviewMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
 
   const handleTemplateChange = (template: keyof typeof codeTemplates) => {
     setSelectedTemplate(template);
@@ -119,6 +121,25 @@ export default function Playground() {
   const handleReset = () => {
     setHtmlCode(codeTemplates[selectedTemplate].html);
     setCssCode(codeTemplates[selectedTemplate].css);
+  };
+
+  const handleCopyCode = async () => {
+    const fullCode = generatePreviewCode();
+    try {
+      await navigator.clipboard.writeText(fullCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy code:', err);
+    }
+  };
+
+  const getPreviewDimensions = () => {
+    switch (previewMode) {
+      case 'tablet': return 'max-w-md mx-auto';
+      case 'mobile': return 'max-w-sm mx-auto';
+      default: return 'w-full';
+    }
   };
 
   const generatePreviewCode = () => {
@@ -164,6 +185,15 @@ export default function Playground() {
             </div>
             
             <div className="flex items-center space-x-3">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleCopyCode}
+                className={copied ? "bg-green-50 border-green-200" : ""}
+              >
+                {copied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
+                {copied ? 'Copied!' : 'Copy Code'}
+              </Button>
               <Button variant="outline" size="sm" data-testid="button-save">
                 <Save className="h-4 w-4 mr-2" />
                 Save
@@ -199,9 +229,9 @@ export default function Playground() {
         </div>
 
         {/* Editor and Preview */}
-        <div className="flex h-[calc(100vh-180px)]">
+        <div className="flex flex-col lg:flex-row h-[calc(100vh-120px)]">
           {/* Code Editor Section */}
-          <div className="w-1/2 border-r border-border flex flex-col">
+          <div className="w-full lg:w-1/2 border-r-0 lg:border-r border-b lg:border-b-0 border-border flex flex-col">
             {/* Editor Tabs */}
             <div className="bg-card border-b border-border p-4">
               <div className="flex items-center justify-between">
@@ -264,32 +294,47 @@ export default function Playground() {
           </div>
 
           {/* Preview Section */}
-          <div className="w-1/2 flex flex-col">
+          <div className="w-full lg:w-1/2 flex flex-col">
             {/* Preview Header */}
             <div className="bg-card border-b border-border p-4">
               <div className="flex items-center justify-between">
                 <h3 className="font-medium">Live Preview</h3>
                 <div className="flex space-x-1">
                   <button 
-                    className="p-2 text-xs bg-muted rounded" 
+                    onClick={() => setPreviewMode('desktop')}
+                    className={`p-2 text-xs rounded transition-colors ${
+                      previewMode === 'desktop' 
+                        ? 'bg-primary text-primary-foreground' 
+                        : 'text-muted-foreground hover:bg-muted'
+                    }`}
                     title="Desktop"
                     data-testid="button-preview-desktop"
                   >
-                    <i className="fas fa-desktop"></i>
+                    <Layout className="h-4 w-4" />
                   </button>
                   <button 
-                    className="p-2 text-xs text-muted-foreground hover:bg-muted rounded" 
+                    onClick={() => setPreviewMode('tablet')}
+                    className={`p-2 text-xs rounded transition-colors ${
+                      previewMode === 'tablet' 
+                        ? 'bg-primary text-primary-foreground' 
+                        : 'text-muted-foreground hover:bg-muted'
+                    }`}
                     title="Tablet"
                     data-testid="button-preview-tablet"
                   >
-                    <i className="fas fa-tablet-alt"></i>
+                    <Code2 className="h-4 w-4" />
                   </button>
                   <button 
-                    className="p-2 text-xs text-muted-foreground hover:bg-muted rounded" 
+                    onClick={() => setPreviewMode('mobile')}
+                    className={`p-2 text-xs rounded transition-colors ${
+                      previewMode === 'mobile' 
+                        ? 'bg-primary text-primary-foreground' 
+                        : 'text-muted-foreground hover:bg-muted'
+                    }`}
                     title="Mobile"
                     data-testid="button-preview-mobile"
                   >
-                    <i className="fas fa-mobile-alt"></i>
+                    <Palette className="h-4 w-4" />
                   </button>
                 </div>
               </div>
@@ -297,7 +342,7 @@ export default function Playground() {
 
             {/* Preview Area */}
             <div className="flex-1 p-4 bg-background">
-              <div className="w-full h-full bg-white border border-border rounded-lg shadow-sm overflow-auto">
+              <div className={`h-full bg-white border border-border rounded-lg shadow-sm overflow-auto ${getPreviewDimensions()}`}>
                 <iframe
                   srcDoc={generatePreviewCode()}
                   className="w-full h-full"

@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Play, Copy } from "lucide-react";
+import { RefreshCw, Play, Copy, AlertCircle, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Lesson } from "@shared/schema";
 
@@ -28,6 +28,9 @@ export default function CodeEditor({
   const { toast } = useToast();
   const [htmlCode, setHtmlCode] = useState('');
   const [cssCode, setCssCode] = useState('');
+  const [cssErrors, setCssErrors] = useState<string[]>([]);
+  const [htmlErrors, setHtmlErrors] = useState<string[]>([]);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Initialize code based on lesson or external props
   useEffect(() => {
@@ -51,14 +54,68 @@ export default function CodeEditor({
     }
   }, [lesson, initialCode, isPlayground, externalHtmlCode, externalCssCode]);
 
+  // Validation functions
+  const validateCSS = (code: string): string[] => {
+    const errors: string[] = [];
+    
+    // Check for unmatched braces
+    const openBraces = (code.match(/\{/g) || []).length;
+    const closeBraces = (code.match(/\}/g) || []).length;
+    if (openBraces !== closeBraces) {
+      errors.push(`Unmatched braces: ${openBraces} opening, ${closeBraces} closing`);
+    }
+
+    // Check for common CSS syntax issues
+    const lines = code.split('\n');
+    lines.forEach((line, index) => {
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.endsWith(';') && !trimmed.endsWith('{') && !trimmed.endsWith('}') && !trimmed.includes('@')) {
+        if (trimmed.includes(':') && !trimmed.startsWith('//') && !trimmed.startsWith('/*')) {
+          errors.push(`Line ${index + 1}: Missing semicolon`);
+        }
+      }
+    });
+
+    return errors;
+  };
+
+  const validateHTML = (code: string): string[] => {
+    const errors: string[] = [];
+    
+    // Check for unmatched tags
+    const tagRegex = /<\/?[^>]+>/g;
+    const tags = code.match(tagRegex) || [];
+    const openTags: string[] = [];
+    const closeTags: string[] = [];
+
+    tags.forEach(tag => {
+      if (tag.startsWith('</')) {
+        closeTags.push(tag.slice(2, -1).split(' ')[0]);
+      } else if (!tag.endsWith('/>')) {
+        openTags.push(tag.slice(1, -1).split(' ')[0]);
+      }
+    });
+
+    // Simple tag matching check
+    const sortedOpen = [...openTags].sort();
+    const sortedClose = [...closeTags].sort();
+    if (JSON.stringify(sortedOpen) !== JSON.stringify(sortedClose)) {
+      errors.push('Unmatched HTML tags detected');
+    }
+
+    return errors;
+  };
+
   // Handle code changes
   const handleHtmlChange = (code: string) => {
     setHtmlCode(code);
+    setHtmlErrors(validateHTML(code));
     onHtmlChange?.(code);
   };
 
   const handleCssChange = (code: string) => {
     setCssCode(code);
+    setCssErrors(validateCSS(code));
     onCssChange?.(code);
   };
 
@@ -153,8 +210,23 @@ export default function CodeEditor({
         <>
           {/* Code Editor Toolbar */}
           <div className="flex items-center justify-between p-3 border-b border-border bg-muted/50">
-            <div className="text-sm font-medium capitalize">
-              {activeTab} Editor
+            <div className="flex items-center space-x-2">
+              <div className="text-sm font-medium capitalize">
+                {activeTab} Editor
+              </div>
+              {((activeTab === 'css' && cssErrors.length > 0) || (activeTab === 'html' && htmlErrors.length > 0)) ? (
+                <div className="flex items-center space-x-1 text-red-500">
+                  <AlertCircle className="h-4 w-4" />
+                  <span className="text-xs">
+                    {(activeTab === 'css' ? cssErrors : htmlErrors).length} error{(activeTab === 'css' ? cssErrors : htmlErrors).length !== 1 ? 's' : ''}
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-1 text-green-500">
+                  <CheckCircle className="h-4 w-4" />
+                  <span className="text-xs">Valid</span>
+                </div>
+              )}
             </div>
             <div className="flex items-center space-x-2">
               <Button
@@ -176,8 +248,25 @@ export default function CodeEditor({
             </div>
           </div>
 
+          {/* Error Display */}
+          {((activeTab === 'css' && cssErrors.length > 0) || (activeTab === 'html' && htmlErrors.length > 0)) && (
+            <div className="bg-red-50 border-b border-red-200 p-3">
+              <div className="flex items-center space-x-2 mb-2">
+                <AlertCircle className="h-4 w-4 text-red-500" />
+                <span className="text-sm font-medium text-red-700">Errors Found</span>
+              </div>
+              <div className="space-y-1">
+                {(activeTab === 'css' ? cssErrors : htmlErrors).map((error, index) => (
+                  <div key={index} className="text-xs text-red-600">
+                    • {error}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Code Editor */}
-          <div className="flex-1 code-editor">
+          <div className="flex-1 code-editor min-h-[400px]">
             <textarea
               value={activeTab === 'html' ? htmlCode : cssCode}
               onChange={(e) => 
@@ -185,7 +274,7 @@ export default function CodeEditor({
                   ? handleHtmlChange(e.target.value)
                   : handleCssChange(e.target.value)
               }
-              className="w-full h-full p-4 bg-slate-900 text-slate-100 font-mono text-sm resize-none focus:outline-none border-0"
+              className="w-full h-full min-h-[400px] p-4 bg-slate-900 text-slate-100 font-mono text-sm resize-none focus:outline-none border-0"
               placeholder={
                 activeTab === 'html' 
                   ? "Enter your HTML code here..." 
