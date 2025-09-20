@@ -1,0 +1,202 @@
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { RefreshCw, Play, Copy } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import type { Lesson } from "@shared/schema";
+
+interface CodeEditorProps {
+  lesson?: Lesson;
+  activeTab: 'html' | 'css' | 'result';
+  initialCode?: string;
+  htmlCode?: string;
+  cssCode?: string;
+  onHtmlChange?: (code: string) => void;
+  onCssChange?: (code: string) => void;
+  isPlayground?: boolean;
+}
+
+export default function CodeEditor({ 
+  lesson, 
+  activeTab, 
+  initialCode = '',
+  htmlCode: externalHtmlCode = '',
+  cssCode: externalCssCode = '',
+  onHtmlChange,
+  onCssChange,
+  isPlayground = false
+}: CodeEditorProps) {
+  const { toast } = useToast();
+  const [htmlCode, setHtmlCode] = useState('');
+  const [cssCode, setCssCode] = useState('');
+
+  // Initialize code based on lesson or external props
+  useEffect(() => {
+    if (isPlayground) {
+      setHtmlCode(externalHtmlCode);
+      setCssCode(externalCssCode);
+    } else if (lesson) {
+      const content = JSON.parse(lesson.content);
+      const exercises = JSON.parse(lesson.exercises);
+      
+      // Default HTML for lessons
+      const defaultHtml = `<div class="grid-container">
+  <div class="header">Header</div>
+  <div class="sidebar">Sidebar</div>
+  <div class="main">Main Content</div>
+  <div class="footer">Footer</div>
+</div>`;
+
+      setHtmlCode(defaultHtml);
+      setCssCode(exercises[0]?.initialCode || content.codeExample || initialCode);
+    }
+  }, [lesson, initialCode, isPlayground, externalHtmlCode, externalCssCode]);
+
+  // Handle code changes
+  const handleHtmlChange = (code: string) => {
+    setHtmlCode(code);
+    onHtmlChange?.(code);
+  };
+
+  const handleCssChange = (code: string) => {
+    setCssCode(code);
+    onCssChange?.(code);
+  };
+
+  const handleReset = () => {
+    if (isPlayground) {
+      // Reset handled by parent component
+      return;
+    }
+    
+    if (lesson) {
+      const exercises = JSON.parse(lesson.exercises);
+      setCssCode(exercises[0]?.initialCode || '');
+      toast({
+        title: "Code Reset",
+        description: "Editor has been reset to initial state.",
+      });
+    }
+  };
+
+  const handleCopy = async () => {
+    try {
+      const codeToCopy = activeTab === 'html' ? htmlCode : cssCode;
+      await navigator.clipboard.writeText(codeToCopy);
+      toast({
+        title: "Copied!",
+        description: `${activeTab.toUpperCase()} code copied to clipboard.`,
+      });
+    } catch (err) {
+      toast({
+        title: "Failed to copy",
+        description: "Could not copy code to clipboard.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const generatePreviewCode = () => {
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body { 
+              margin: 0; 
+              padding: 20px; 
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              background: #f8fafc;
+            }
+            .grid-container, .flex-container, .position-container {
+              min-height: 200px;
+              background: white;
+              border-radius: 8px;
+              padding: 20px;
+              box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+            }
+            .grid-container > div,
+            .flex-container > div,
+            .position-container > div {
+              background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+              color: white;
+              padding: 15px;
+              border-radius: 6px;
+              font-weight: bold;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+            ${cssCode}
+          </style>
+        </head>
+        <body>
+          ${htmlCode}
+        </body>
+      </html>
+    `;
+  };
+
+  return (
+    <div className="flex-1 flex flex-col">
+      {activeTab === 'result' ? (
+        <div className="flex-1 p-4 bg-background">
+          <div className="w-full h-full bg-white border border-border rounded-lg shadow-sm overflow-auto">
+            <iframe
+              srcDoc={generatePreviewCode()}
+              className="w-full h-full"
+              title="CSS Preview"
+              data-testid="iframe-editor-preview"
+            />
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Code Editor Toolbar */}
+          <div className="flex items-center justify-between p-3 border-b border-border bg-muted/50">
+            <div className="text-sm font-medium capitalize">
+              {activeTab} Editor
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleCopy}
+                data-testid="button-copy-code"
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleReset}
+                data-testid="button-reset-code"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Code Editor */}
+          <div className="flex-1 code-editor">
+            <textarea
+              value={activeTab === 'html' ? htmlCode : cssCode}
+              onChange={(e) => 
+                activeTab === 'html' 
+                  ? handleHtmlChange(e.target.value)
+                  : handleCssChange(e.target.value)
+              }
+              className="w-full h-full p-4 bg-slate-900 text-slate-100 font-mono text-sm resize-none focus:outline-none border-0"
+              placeholder={
+                activeTab === 'html' 
+                  ? "Enter your HTML code here..." 
+                  : "Enter your CSS code here..."
+              }
+              spellCheck={false}
+              data-testid={`textarea-${activeTab}-code`}
+            />
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
